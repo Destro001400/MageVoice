@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/spell_fireball">
+    
+    <target
+        android:name="flame_outer"
+        android:animation="@animator/spell_fireball_flame" />
+        
+    <target
+        android:name="flame_inner"
+        android:animation="@animator/spell_fireball_core" />
+</animated-vector>

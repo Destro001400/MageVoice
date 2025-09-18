@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    
+    <!-- Background tile pattern -->
+    <path
+        android:fillColor="#508050"
+        android:pathData="M0,0 h64 v64 h-64 z" />
+    
+    <!-- Grass texture pattern -->
+    <path
+        android:strokeColor="#407040"
+        android:strokeWidth="1"
+        android:pathData="M8,8 Q16,16 24,8 M40,8 Q48,16 56,8
+                         M8,24 Q16,32 24,24 M40,24 Q48,32 56,24
+                         M8,40 Q16,48 24,40 M40,40 Q48,48 56,40
+                         M8,56 Q16,64 24,56 M40,56 Q48,64 56,56" />
+</vector>

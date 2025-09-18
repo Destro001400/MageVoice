@@ -17,7 +17,6 @@ abstract class Spell {
      * Executes the spell's logic.
      * @param caster The player casting the spell.
      * @param target The target position or entity for the spell.
-     *               Could be a specific Player or a Vector3 point in the world.
      */
     abstract fun execute(caster: Player, target: Vector3)
 }

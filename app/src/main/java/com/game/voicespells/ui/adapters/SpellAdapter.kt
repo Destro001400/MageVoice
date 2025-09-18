@@ -14,7 +14,6 @@ class SpellAdapter(
     private val onSpellClickListener: (Spell) -> Unit
 ) : RecyclerView.Adapter<SpellAdapter.SpellViewHolder>() {
 
-    // Keep track of selected spells if needed, for now just click listener
     private val selectedSpells = mutableSetOf<Spell>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SpellViewHolder {
@@ -25,8 +24,6 @@ class SpellAdapter(
     override fun onBindViewHolder(holder: SpellViewHolder, position: Int) {
         val spell = spells[position]
         holder.bind(spell, onSpellClickListener)
-        // Update UI based on selection state if selection is handled here
-        // holder.itemView.alpha = if (selectedSpells.contains(spell)) 1.0f else 0.5f 
     }
 
     override fun getItemCount(): Int = spells.size
@@ -40,22 +37,8 @@ class SpellAdapter(
             spellName.text = spell.name
             val description = "Cost: ${spell.manaCost} Mana, Dmg: ${spell.damage}, CD: ${spell.cooldown}s"
             spellDescription.text = description
-
-            // Set a placeholder icon, or load dynamically based on spell
-            // e.g., when (spell) { is Fireball -> spellIcon.setImageResource(R.drawable.ic_fireball) ... }
-            spellIcon.setImageResource(android.R.drawable.star_on) // Placeholder icon
-            
-            itemView.setOnClickListener {
-                clickListener(spell)
-                // Example of toggling selection visual state - this would require more logic
-                // if (selectedSpells.contains(spell)) {
-                //     selectedSpells.remove(spell)
-                //     itemView.alpha = 0.5f
-                // } else {
-                //     selectedSpells.add(spell)
-                //     itemView.alpha = 1.0f
-                // }
-            }
+            spellIcon.setImageResource(android.R.drawable.star_on)
+            itemView.setOnClickListener { clickListener(spell) }
         }
     }
 }

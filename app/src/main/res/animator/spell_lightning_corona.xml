@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Rotation animation -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="4000"
+        android:valueFrom="0"
+        android:valueTo="360"
+        android:repeatCount="infinite"
+        android:interpolator="@android:interpolator/linear" />
+        
+    <!-- Subtle pulsing -->
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="2000"
+        android:valueFrom="0.4"
+        android:valueTo="0.8"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

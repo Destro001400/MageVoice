@@ -3,17 +3,29 @@
 
 #include <EGL/egl.h>
 #include <memory>
+#include <vector>
 
 #include "Model.h"
 #include "Shader.h"
 
 struct android_app;
 
+// Structs to hold game state information passed from the JNI layer
+struct PlayerState {
+    float id;
+    float x;
+    float y;
+};
+
+struct ProjectileState {
+    float id;
+    float x;
+    float y;
+    float type;
+};
+
 class Renderer {
 public:
-    /*!
-     * @param pApp the android_app this Renderer belongs to, needed to configure GL
-     */
     inline Renderer(android_app *pApp) :
             app_(pApp),
             display_(EGL_NO_DISPLAY),
@@ -27,35 +39,18 @@ public:
 
     virtual ~Renderer();
 
-    /*!
-     * Handles input from the android_app.
-     *
-     * Note: this will clear the input queue
-     */
     void handleInput();
 
     /*!
-     * Renders all the models in the renderer
+     * Renders the game state.
+     * @param players A vector of all active players.
+     * @param projectiles A vector of all active projectiles.
      */
-    void render();
+    void render(const std::vector<PlayerState> &players, const std::vector<ProjectileState> &projectiles);
 
 private:
-    /*!
-     * Performs necessary OpenGL initialization. Customize this if you want to change your EGL
-     * context or application-wide settings.
-     */
     void initRenderer();
-
-    /*!
-     * @brief we have to check every frame to see if the framebuffer has changed in size. If it has,
-     * update the viewport accordingly
-     */
     void updateRenderArea();
-
-    /*!
-     * Creates the models for this sample. You'd likely load a scene configuration from a file or
-     * use some other setup logic in your full game.
-     */
     void createModels();
 
     android_app *app_;

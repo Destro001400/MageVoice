@@ -4,12 +4,13 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.game.voicespells.R // Assuming R is in com.game.voicespells
+import com.game.voicespells.R
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,27 +28,19 @@ class MainActivity : AppCompatActivity() {
 
         playButton.setOnClickListener {
             if (hasPermissions()) {
-                // Navigate to GameActivity - Placeholder for now
-                // val intent = Intent(this, GameActivity::class.java)
-                // startActivity(intent)
-                Toast.makeText(this, "Navigating to GameActivity...", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, GameActivity::class.java)
+                startActivity(intent)
             } else {
                 Toast.makeText(this, "Permissions required to play", Toast.LENGTH_LONG).show()
-                checkAndRequestPermissions() // Prompt again if not granted
+                checkAndRequestPermissions()
             }
         }
 
         configureSpellsButton.setOnClickListener {
-            // Navigate to SpellSelectionActivity - Placeholder for now
-            // val intent = Intent(this, SpellSelectionActivity::class.java)
-            // startActivity(intent)
             Toast.makeText(this, "Navigating to Spell Configuration...", Toast.LENGTH_SHORT).show()
         }
 
         settingsButton.setOnClickListener {
-            // Navigate to SettingsActivity - Placeholder for now
-            // val intent = Intent(this, SettingsActivity::class.java)
-            // startActivity(intent)
             Toast.makeText(this, "Navigating to Settings...", Toast.LENGTH_SHORT).show()
         }
     }
@@ -65,7 +58,9 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.INTERNET)
         }
-        // Add other permissions like ACCESS_WIFI_STATE if needed for LAN directly here
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_WIFI_STATE)
+        }
 
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), REQUEST_PERMISSIONS_CODE)
@@ -76,17 +71,17 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_PERMISSIONS_CODE) {
             var allPermissionsGranted = true
-            for (grantResult in grantResults) {
-                if (grantResult != PackageManager.PERMISSION_GRANTED) {
+            for (i in grantResults.indices) {
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     allPermissionsGranted = false
-                    break
+                    Log.w("Permissions", "Permission denied: ${permissions[i]}")
                 }
             }
+
             if (allPermissionsGranted) {
                 Toast.makeText(this, "Permissions Granted!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Some permissions were denied. The app might not function correctly.", Toast.LENGTH_LONG).show()
-                // Handle cases where permissions are denied, e.g., disable features or explain why they are needed.
             }
         }
     }

@@ -7,5 +7,5 @@ object GameConfig {
     const val RESPAWN_TIME = 10f // Seconds
     const val HP_REGEN = 5f // HP per second when out of combat
     const val MANA_REGEN = 10f // Mana per second
-    const val FRIENDLY_FIRE_DAMAGE = 0.5f // Multiplier for friendly fire (1.0 = full damage, 0.0 = no damage)
+    const val FRIENDLY_FIRE_DAMAGE = 0.5f // Multiplier for friendly fire
 }

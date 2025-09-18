@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Slow rotation in opposite direction -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="8000"
+        android:valueFrom="360"
+        android:valueTo="0"
+        android:repeatCount="infinite"
+        android:interpolator="@android:interpolator/linear" />
+        
+    <!-- Scale pulsing -->
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="2000"
+        android:valueFrom="1.1"
+        android:valueTo="0.9"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="2000"
+        android:valueFrom="1.1"
+        android:valueTo="0.9"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

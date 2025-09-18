@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    
+    <!-- Energy field -->
+    <group
+        android:name="energy_field"
+        android:pivotX="24"
+        android:pivotY="24">
+        <path
+            android:fillColor="#80FFE082"
+            android:pathData="M24,24 m-22,0 a22,22 0 1,0 44,0 a22,22 0 1,0 -44,0" />
+    </group>
+    
+    <!-- Electric corona -->
+    <group
+        android:name="corona"
+        android:pivotX="24"
+        android:pivotY="24">
+        <!-- Corona effect using multiple short lines instead of dashed stroke -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1"
+            android:pathData="M24,2 L28,2 M32,3 L36,4 M40,6 L43,8 M45,11 L46,15
+                           M46,19 L46,24 M46,28 L46,32 M45,36 L43,40 M40,42 L36,44
+                           M32,45 L28,46 M24,46 L20,46 M16,45 L12,44 M8,42 L5,40
+                           M3,36 L2,32 M2,28 L2,24 M2,20 L2,16 M3,12 L5,8
+                           M8,6 L12,4 M16,3 L20,2" />
+    </group>
+    
+    <!-- Main energy core -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:pathData="M24,24 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0" />
+    
+    <!-- Lightning bolts -->
+    <group
+        android:name="bolts"
+        android:pivotX="24"
+        android:pivotY="24">
+        <!-- Central bolt -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M28,4 L20,20 L30,20 L22,44 L24,26 L16,26 Z" />
+        
+        <!-- Side bolts -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M38,14 L32,22 L36,22 L30,32 L34,24 L30,24 Z
+                           M10,14 L16,22 L12,22 L18,32 L14,24 L18,24 Z" />
+    </group>
+    
+    <!-- Energy sparks -->
+    <group
+        android:name="sparks"
+        android:pivotX="24"
+        android:pivotY="24">
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1"
+            android:pathData="M24,8 L26,12 M24,40 L22,36
+                           M8,24 L12,26 M40,24 L36,22
+                           M12,12 L16,16 M36,36 L32,32
+                           M36,12 L32,16 M12,36 L16,32" />
+    </group>
+</vector>

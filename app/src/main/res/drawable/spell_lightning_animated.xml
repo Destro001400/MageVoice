@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/spell_lightning">
+    
+    <target
+        android:name="corona"
+        android:animation="@animator/spell_lightning_corona" />
+        
+    <target
+        android:name="bolts"
+        android:animation="@animator/spell_lightning_bolts" />
+        
+    <target
+        android:name="sparks"
+        android:animation="@animator/spell_lightning_sparks" />
+</animated-vector>

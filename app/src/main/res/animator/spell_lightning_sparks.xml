@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fast flickering effect -->
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="75"
+        android:valueFrom="0.3"
+        android:valueTo="1.0"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/linear" />
+        
+    <!-- Quick rotation jitters -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="25"
+        android:valueFrom="-2"
+        android:valueTo="2"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/bounce" />
+</set>

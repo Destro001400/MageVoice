@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/spell_gust">
+    
+    <target
+        android:name="wind_primary"
+        android:animation="@animator/spell_gust_primary" />
+        
+    <target
+        android:name="wind_secondary"
+        android:animation="@animator/spell_gust_secondary" />
+        
+    <target
+        android:name="particles"
+        android:animation="@animator/spell_gust_particles" />
+</animated-vector>

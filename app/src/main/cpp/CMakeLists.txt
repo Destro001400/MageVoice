@@ -5,6 +5,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("magevoice")
 
+# Request Android platform 30 for the build. This sets the sysroot/headers to API 30
+# so AImageDecoder and other APIs introduced in Android 30 are available.
+set(CMAKE_SYSTEM_VERSION 30)
+
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
 add_library(magevoice SHARED
@@ -34,3 +38,6 @@ target_link_libraries(magevoice
         jnigraphics
         android
         log)
+
+# Ensure the native compilation targets Android API 30 to allow AImageDecoder usage
+target_compile_definitions(magevoice PRIVATE __ANDROID_API__=30)

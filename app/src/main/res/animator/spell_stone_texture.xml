@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Slow rotation for texture detail -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="4000"
+        android:valueFrom="-5"
+        android:valueTo="5"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <!-- Scale pulsing for "earth pressure" -->
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="2000"
+        android:valueFrom="0.95"
+        android:valueTo="1.05"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="2000"
+        android:valueFrom="0.95"
+        android:valueTo="1.05"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

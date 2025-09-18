@@ -9,18 +9,6 @@ public:
 
     static inline void assertGlError() { assert(checkAndLogGlError()); }
 
-    /**
-     * Generates an orthographic projection matrix given the half height, aspect ratio, near, and far
-     * planes
-     *
-     * @param outMatrix the matrix to write into
-     * @param halfHeight half of the height of the screen
-     * @param aspect the width of the screen divided by the height
-     * @param near the distance of the near plane
-     * @param far the distance of the far plane
-     * @return the generated matrix, this will be the same as @a outMatrix so you can chain calls
-     *     together if needed
-     */
     static float *buildOrthographicMatrix(
             float *outMatrix,
             float halfHeight,
@@ -29,6 +17,12 @@ public:
             float far);
 
     static float *buildIdentityMatrix(float *outMatrix);
+
+    static float *buildTranslationMatrix(float *outMatrix, float x, float y, float z);
+
+    static float *buildScaleMatrix(float *outMatrix, float x, float y, float z);
+
+    static float *multiplyMatrices(float *outMatrix, float *matrixA, float *matrixB);
 };
 
 #endif //ANDROIDGLINVESTIGATIONS_UTILITY_H

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Quick pulsing alpha for lightning effect -->
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="100"
+        android:valueFrom="0.6"
+        android:valueTo="1.0"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <!-- Random-like rotation -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="50"
+        android:valueFrom="-5"
+        android:valueTo="5"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/linear" />
+</set>

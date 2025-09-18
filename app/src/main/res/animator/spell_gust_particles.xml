@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fast rotation for particle movement -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="1000"
+        android:valueFrom="0"
+        android:valueTo="360"
+        android:repeatCount="infinite"
+        android:interpolator="@android:interpolator/linear" />
+        
+    <!-- Alpha pulsing for sparkling effect -->
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="500"
+        android:valueFrom="0.2"
+        android:valueTo="1.0"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

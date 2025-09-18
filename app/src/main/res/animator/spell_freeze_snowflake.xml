@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Rotation animation for snowflake pattern -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="6000"
+        android:valueFrom="0"
+        android:valueTo="360"
+        android:repeatCount="infinite"
+        android:interpolator="@android:interpolator/linear" />
+        
+    <!-- Scale animation for "crystal growth" effect -->
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="2000"
+        android:valueFrom="0.95"
+        android:valueTo="1.05"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="2000"
+        android:valueFrom="0.95"
+        android:valueTo="1.05"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

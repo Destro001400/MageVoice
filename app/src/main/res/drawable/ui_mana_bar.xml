@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="40dp"
+    android:viewportWidth="200"
+    android:viewportHeight="40">
+    
+    <!-- Bar background -->
+    <path
+        android:fillColor="#444444"
+        android:pathData="M10,5 L190,5 Q195,5 195,10 L195,30 Q195,35 190,35 L10,35 Q5,35 5,30 L5,10 Q5,5 10,5" />
+    
+    <!-- Mana fill (adjust android:pathData width for current mana %) -->
+    <path
+        android:fillColor="#4444FF"
+        android:pathData="M10,8 L170,8 Q175,8 175,13 L175,27 Q175,32 170,32 L10,32 Q5,32 5,27 L5,13 Q5,8 10,8" />
+</vector>

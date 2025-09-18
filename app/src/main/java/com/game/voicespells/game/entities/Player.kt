@@ -1,24 +1,41 @@
 package com.game.voicespells.game.entities
 
-import com.game.voicespells.game.spells.Spell // Forward declaration, will be created next
+import com.game.voicespells.game.spells.Spell
 import com.game.voicespells.utils.Vector3
+import com.game.voicespells.utils.GameConfig
+import kotlin.concurrent.schedule
+import java.util.Timer
 
 /**
  * Represents a player in the game.
- * This is a placeholder and will be expanded upon.
  */
 data class Player(
     var position: Vector3,
-    var rotation: Float, // Assuming rotation around Y-axis for simplicity
+    var rotation: Float, // rotation in radians or degrees depending on usage
     var hp: Int = 100,
     var mana: Int = 100,
     var selectedSpells: List<Spell> = emptyList(),
     val id: String
 ) {
+    private var alive = true
+
+    // Helper properties to match existing code that used caster.x / caster.y
+    var x: Float
+        get() = position.x
+        set(value) { position.x = value }
+
+    var y: Float
+        get() = position.y
+        set(value) { position.y = value }
+
     fun takeDamage(amount: Int) {
+        if (!alive) return
         hp -= amount
-        if (hp < 0) hp = 0
-        // Add logic for player death, etc.
+        if (hp <= 0) {
+            hp = 0
+            alive = false
+            respawn()
+        }
     }
 
     fun useMana(amount: Int): Boolean {
@@ -29,21 +46,19 @@ data class Player(
         return false
     }
 
-    // Placeholder for castSpell - actual logic will depend on Spell implementations
     fun castSpell(spell: Spell, target: Vector3) {
-        if (useMana(spell.manaCost)) {
-            // spell.execute(this, target) // This will be called by the game logic/spell system
-            // Actual execution might be handled by a SpellExecutionSystem
-            println("Player $id casts ${spell.name} at $target")
-        } else {
-            println("Player $id failed to cast ${spell.name}: not enough mana")
-        }
+        if (!alive) return
+        if (!useMana(spell.manaCost)) return
+        spell.execute(this, target)
     }
 
     fun respawn() {
-        hp = 100
-        mana = 100
-        // Reset position to a spawn point, etc.
-        println("Player $id respawned.")
+        // simple respawn after RESPAWN_TIME seconds
+        Timer().schedule((GameConfig.RESPAWN_TIME * 1000).toLong()) {
+            hp = 100
+            mana = 100
+            alive = true
+            position = Vector3(0f, 0f, 0f)
+        }
     }
 }

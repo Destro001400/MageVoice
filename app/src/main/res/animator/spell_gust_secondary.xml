@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Counter-rotation for complex wind movement -->
+    <objectAnimator
+        android:propertyName="rotation"
+        android:duration="3000"
+        android:valueFrom="15"
+        android:valueTo="-15"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+        
+    <!-- Alpha pulsing for wind visibility -->
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="1500"
+        android:valueFrom="0.4"
+        android:valueTo="1.0"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/fast_out_slow_in" />
+</set>

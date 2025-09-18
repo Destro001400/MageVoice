@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    
+    <!-- Player body (blue circle) -->
+    <path
+        android:fillColor="#4444FF"
+        android:pathData="M32,32 m-24,0 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0" />
+    
+    <!-- Direction indicator (white triangle) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,12 L42,36 L22,36 Z" />
+</vector>
