@@ -6,149 +6,25 @@
     android:layout_height="match_parent"
     tools:context=".presentation.activities.GameActivity">
 
-    <SurfaceView
-        android:id="@+id/surface_view_game"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <TextView
+        android:id="@+id/spell_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Say a spell!"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toTopOf="@+id/mic_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- HUD Overlay -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/hud_layout"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+    <Button
+        android:id="@+id/mic_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hold to Speak"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <LinearLayout
-            android:id="@+id/network_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <Button
-                android:id="@+id/button_host"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Host Game" />
-
-            <Button
-                android:id="@+id/button_join"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="Join Game" />
-
-        </LinearLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/gameplay_layout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <TextView
-                android:id="@+id/text_view_hp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:text="HP: 100"
-                android:textColor="@android:color/white"
-                android:textSize="20sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/text_view_mana"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="16dp"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:text="Mana: 100"
-                android:textColor="@android:color/white"
-                android:textSize="20sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <com.game.voicespells.presentation.ui.JoystickView
-                android:id="@+id/view_joystick"
-                android:layout_width="150dp"
-                android:layout_height="150dp"
-                android:layout_marginStart="32dp"
-                android:layout_marginBottom="32dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/button_mic"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:layout_marginBottom="32dp"
-                android:src="@android:drawable/ic_btn_speak_now"
-                app:fabCustomSize="80dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/button_book"
-                app:layout_constraintStart_toEndOf="@+id/view_joystick"
-                app:tint="@android:color/white" />
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/button_book"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_marginBottom="40dp"
-                android:src="@android:drawable/ic_menu_agenda"
-                app:fabCustomSize="64dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/view_camera_area"
-                app:layout_constraintStart_toEndOf="@+id/button_mic"
-                app:tint="@android:color/white" />
-
-            <TextView
-                android:id="@+id/text_view_spell_caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:text=""
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@+id/button_mic"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <TextView
-            android:id="@+id/text_view_voice_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="#80000000"
-            android:padding="8dp"
-            android:text=""
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        app:layout_constraintTop_toBottomOf="@+id/spell_text_view" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
