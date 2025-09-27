@@ -1,59 +1,36 @@
-#ifndef ANDROIDGLINVESTIGATIONS_RENDERER_H
-#define ANDROIDGLINVESTIGATIONS_RENDERER_H
+#ifndef MAGEVOICE_RENDERER_H
+#define MAGEVOICE_RENDERER_H
 
 #include <EGL/egl.h>
 #include <memory>
-#include <vector>
 
-#include "Model.h"
+#include "GameState.h"
+class Model; // Forward declaration for the drawable model
 #include "Shader.h"
 
-struct android_app;
-
-// Structs to hold game state information passed from the JNI layer
-struct PlayerState {
-    float id;
-    float x;
-    float y;
-};
-
-struct ProjectileState {
-    float id;
-    float x;
-    float y;
-    float type;
-};
+struct ANativeWindow;
 
 class Renderer {
 public:
-    inline Renderer(android_app *pApp) :
-            app_(pApp),
-            display_(EGL_NO_DISPLAY),
-            surface_(EGL_NO_SURFACE),
-            context_(EGL_NO_CONTEXT),
-            width_(0),
-            height_(0),
-            shaderNeedsNewProjectionMatrix_(true) {
-        initRenderer();
-    }
-
+    Renderer();
     virtual ~Renderer();
 
-    void handleInput();
+    // Initialize the renderer with a native window
+    void init(ANativeWindow* window);
 
-    /*!
-     * Renders the game state.
-     * @param players A vector of all active players.
-     * @param projectiles A vector of all active projectiles.
-     */
-    void render(const std::vector<PlayerState> &players, const std::vector<ProjectileState> &projectiles);
+    // Update the game state
+    void update(Model& model);
+
+    // Render the game state
+    void render(const Model& model);
+
+    // Handle any continuous input (not joystick)
+    void handleInput();
 
 private:
     void initRenderer();
     void updateRenderArea();
-    void createModels();
 
-    android_app *app_;
     EGLDisplay display_;
     EGLSurface surface_;
     EGLContext context_;
@@ -63,7 +40,7 @@ private:
     bool shaderNeedsNewProjectionMatrix_;
 
     std::unique_ptr<Shader> shader_;
-    std::vector<Model> models_;
+    std::unique_ptr<Model> playerModel_;
 };
 
-#endif //ANDROIDGLINVESTIGATIONS_RENDERER_H
+#endif //MAGEVOICE_RENDERER_H

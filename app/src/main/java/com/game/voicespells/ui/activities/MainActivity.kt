@@ -4,50 +4,62 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
-import android.widget.Button
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.game.voicespells.R
+import com.game.voicespells.databinding.ActivityMainBinding
+// import com.game.voicespells.ui.activities.GameActivity // Will be created later
+// import com.game.voicespells.ui.activities.SpellSelectionActivity // Will be created later
+// import com.game.voicespells.ui.activities.SettingsActivity // Will be created later
 
 class MainActivity : AppCompatActivity() {
 
-    private val REQUEST_PERMISSIONS_CODE = 101
+    private lateinit var binding: ActivityMainBinding
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        val playButton: Button = findViewById(R.id.button_play)
-        val configureSpellsButton: Button = findViewById(R.id.button_configure_spells)
-        val settingsButton: Button = findViewById(R.id.button_settings)
-
-        checkAndRequestPermissions()
-
-        playButton.setOnClickListener {
-            if (hasPermissions()) {
-                val intent = Intent(this, GameActivity::class.java)
-                startActivity(intent)
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            var allPermissionsGranted = true
+            permissions.entries.forEach {
+                if (!it.value) {
+                    allPermissionsGranted = false
+                }
+            }
+            if (allPermissionsGranted) {
+                // Permissions granted, proceed with action that required permissions
+                navigateToGameActivity()
             } else {
-                Toast.makeText(this, "Permissions required to play", Toast.LENGTH_LONG).show()
-                checkAndRequestPermissions()
+                // Explain to the user that the feature is unavailable because
+                // the features requires a permission that the user has denied.
+                // At the same time, respect the user's decision. Don't link to
+                // system settings in an effort to convince the user to change
+                // their decision.
+                Toast.makeText(this, "Algumas permissões são necessárias para jogar.", Toast.LENGTH_LONG).show()
             }
         }
 
-        configureSpellsButton.setOnClickListener {
-            Toast.makeText(this, "Navigating to Spell Configuration...", Toast.LENGTH_SHORT).show()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        binding.buttonPlay.setOnClickListener {
+            checkAndRequestPermissions()
         }
 
-        settingsButton.setOnClickListener {
-            Toast.makeText(this, "Navigating to Settings...", Toast.LENGTH_SHORT).show()
+        binding.buttonConfigureSpells.setOnClickListener {
+            // Navigate to SpellSelectionActivity - To be implemented
+            // val intent = Intent(this, SpellSelectionActivity::class.java)
+            // startActivity(intent)
+            Toast.makeText(this, "Configurar Magias - A ser implementado", Toast.LENGTH_SHORT).show()
         }
-    }
 
-    private fun hasPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED &&
-               ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED
+        binding.buttonSettings.setOnClickListener {
+            // Navigate to SettingsActivity - To be implemented
+            // val intent = Intent(this, SettingsActivity::class.java)
+            // startActivity(intent)
+            Toast.makeText(this, "Configurações - A ser implementado", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun checkAndRequestPermissions() {
@@ -58,31 +70,21 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.INTERNET)
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.ACCESS_WIFI_STATE)
-        }
+        // Add other permissions like ACCESS_WIFI_STATE if explicitly needed for LAN discovery early on
+        // For now, only RECORD_AUDIO and INTERNET as per core requirements for voice and potential online play.
 
         if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), REQUEST_PERMISSIONS_CODE)
+            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+        } else {
+            // Permissions already granted
+            navigateToGameActivity()
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_PERMISSIONS_CODE) {
-            var allPermissionsGranted = true
-            for (i in grantResults.indices) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    allPermissionsGranted = false
-                    Log.w("Permissions", "Permission denied: ${permissions[i]}")
-                }
-            }
-
-            if (allPermissionsGranted) {
-                Toast.makeText(this, "Permissions Granted!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Some permissions were denied. The app might not function correctly.", Toast.LENGTH_LONG).show()
-            }
-        }
+    private fun navigateToGameActivity() {
+        // Placeholder for GameActivity navigation
+        // val intent = Intent(this, GameActivity::class.java)
+        // startActivity(intent)
+        Toast.makeText(this, "Navegando para GameActivity (A ser implementado)", Toast.LENGTH_SHORT).show()
     }
 }

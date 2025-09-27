@@ -48,6 +48,10 @@ dependencies {
     implementation(libs.androidx.games.activity)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.activity.ktx)
+
+    // WebRTC for voice chat
+    implementation("com.infobip:google-webrtc:1.0.45036")
 
     // Ktor & Serialization
     implementation(libs.ktor.client.core)

@@ -25,7 +25,7 @@ public:
      */
     constexpr GLuint getTextureID() const { return textureID_; }
 
-private:
+public:
     inline TextureAsset(GLuint textureId) : textureID_(textureId) {}
 
     GLuint textureID_;
