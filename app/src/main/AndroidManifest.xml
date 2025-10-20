@@ -18,24 +18,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MageVoice">
+        
+        <activity
+            android:name=".presentation.activities.LobbyActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
         <activity
             android:name="com.game.voicespells.presentation.activities.GameActivity"
-            android:exported="true"
+            android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|density"
             android:screenOrientation="landscape"
             tools:replace="android:screenOrientation">
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="magevoice" />
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
+        
         <activity android:name=".ui.activities.SpellSelectionActivity" />
 
-
-        
     </application>
 
 </manifest>

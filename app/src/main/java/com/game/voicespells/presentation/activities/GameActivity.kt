@@ -14,6 +14,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.game.voicespells.core.voice.VoiceRecognitionManager
 import com.game.voicespells.databinding.ActivityGameBinding
+import com.game.voicespells.network.Action
+import com.game.voicespells.network.NetworkManager
+import com.game.voicespells.network.UpdatePosition
+import com.game.voicespells.network.Vector2
 import com.game.voicespells.presentation.viewmodels.GameViewModel
 import kotlinx.coroutines.launch
 
@@ -24,11 +28,13 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private lateinit var voiceRecognitionManager: VoiceRecognitionManager
 
     private val recordAudioRequestCode = 101
+    private var localPlayerId: String? = null
 
     // JNI Functions
     private external fun initNative(surface: Surface)
     private external fun onJoystickMovedNative(x: Float, y: Float)
     private external fun cleanupNative()
+    private external fun updatePlayerStateNative(playerId: String, x: Float, y: Float, hp: Int, mana: Int)
 
     companion object {
         init {
@@ -41,11 +47,15 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         binding = ActivityGameBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.gameSurface.holder.addCallback(this)
+        localPlayerId = intent.getStringExtra("PLAYER_ID")
+        NetworkManager.init(this)
+
+        binding.surfaceViewGame.holder.addCallback(this)
 
         setupPermissions()
         setupUI()
         observeViewModel()
+        observeNetwork()
     }
 
     private fun setupPermissions() {
@@ -60,15 +70,19 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
             viewModel.observeVoiceRecognition(voiceRecognitionManager)
         }
 
-        binding.micButton.setOnTouchListener { _, event ->
+        binding.buttonMicrophone.setOnTouchListener { _, event ->
             handleMicButtonTouch(event)
             true
         }
 
-        binding.joystickPlaceholder.setOnTouchListener { v, event ->
+        binding.joystickViewLeft.setOnTouchListener { v, event ->
             handleJoystickTouch(event, v)
             true
         }
+    }
+
+    fun updatePlayerOnEngine(playerId: String, x: Float, y: Float, hp: Int, mana: Int) {
+        updatePlayerStateNative(playerId, x, y, hp, mana)
     }
 
     private fun handleMicButtonTouch(event: MotionEvent) {
@@ -81,6 +95,8 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
     }
 
     private fun handleJoystickTouch(event: MotionEvent, view: View) {
+        val localId = localPlayerId ?: return
+
         when (event.action) {
             MotionEvent.ACTION_DOWN,
             MotionEvent.ACTION_MOVE -> {
@@ -92,46 +108,47 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 var deltaX = inputX - centerX
                 var deltaY = inputY - centerY
 
-                // Normalize
                 val distance = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
                 if (distance > centerX) { // Clamp to the edge of the joystick
                     deltaX = (deltaX / distance) * centerX
                     deltaY = (deltaY / distance) * centerY
                 }
 
-                // Final normalized values [-1, 1]
                 val normalizedX = deltaX / centerX
                 val normalizedY = deltaY / centerY
 
                 onJoystickMovedNative(normalizedX, normalizedY)
+
+                val action = UpdatePosition(localId, Vector2(normalizedX, normalizedY))
+                NetworkManager.sendAction(action)
             }
             MotionEvent.ACTION_UP -> {
                 onJoystickMovedNative(0f, 0f)
+                val action = UpdatePosition(localId, Vector2(0f, 0f))
+                NetworkManager.sendAction(action)
             }
         }
     }
 
     private fun observeViewModel() {
-        lifecycleScope.launch {
-            viewModel.localPlayer.collect { player ->
-                binding.hpText.text = "HP: ${player.hp}"
-                binding.mpText.text = "MP: ${player.mana}"
-            }
-        }
+        // This would be driven by the network state now
+    }
 
+    private fun observeNetwork() {
         lifecycleScope.launch {
-            viewModel.lastCastedSpell.collect { spell ->
-                spell?.let {
-                    println("Casted: ${it.name}")
+            NetworkManager.clientGameState.collect { gameState ->
+                gameState.players.forEach { (id, playerState) ->
+                    updatePlayerOnEngine(
+                        id,
+                        playerState.position.x,
+                        playerState.position.y,
+                        playerState.hp,
+                        playerState.mana
+                    )
                 }
-            }
-        }
-
-        if(::voiceRecognitionManager.isInitialized) {
-            lifecycleScope.launch {
-                voiceRecognitionManager.status.collect { status ->
-                    // TODO: Update mic button visual based on status
-                }
+                // You could update the ViewModel here with the local player's state
+                // val localPlayerState = gameState.players[localPlayerId]
+                // if (localPlayerState != null) viewModel.updateLocalPlayerState(localPlayerState)
             }
         }
     }
@@ -146,6 +163,7 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     override fun onDestroy() {
         cleanupNative()
+        NetworkManager.disconnect()
         if (::voiceRecognitionManager.isInitialized) {
             voiceRecognitionManager.destroy()
         }
@@ -157,11 +175,7 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         initNative(holder.surface)
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // The native code should handle this if needed
-    }
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
-    override fun surfaceDestroyed(holder: SurfaceHolder) {
-        // The native code should handle this if needed
-    }
+    override fun surfaceDestroyed(holder: SurfaceHolder) {}
 }

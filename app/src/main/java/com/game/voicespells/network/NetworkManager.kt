@@ -3,329 +3,230 @@ package com.game.voicespells.network
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import com.game.voicespells.game.entities.Player
-import com.game.voicespells.game.entities.Vector3
-import com.game.voicespells.game.spells.SpellType
-import java.io.IOException
-import java.net.InetAddress
-import java.net.ServerSocket
-import java.net.Socket
-// Para UDP e serialização de dados, precisaremos de mais importações depois (ex: Ktor, Kotlinx Serialization)
+import com.game.voicespells.utils.Vector3
+import io.ktor.client.*
+import io.ktor.client.plugins.websocket.WebSockets as ClientWebSockets
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.cio.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.WebSockets as ServerWebSockets
+import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.util.concurrent.ConcurrentHashMap
 
-data class GameStateUpdate(
-    val playerId: String,
-    val position: Vector3,
-    val rotation: Float,
-    val hp: Int,
-    val mana: Int
-    // Add other relevant fields like velocity, current action, etc.
-)
+object NetworkManager {
+    private const val TAG = "NetworkManagerKtor"
+    private const val SERVICE_TYPE = "_magevoice._tcp"
+    private const val SERVICE_NAME = "MageVoiceHost"
+    private const val PORT = 8080
 
-data class SpellCastAction(
-    val casterId: String,
-    val spellType: SpellType,
-    val targetPosition: Vector3
-    // Potencialmente, ID do alvo se houver
-)
+    private var server: ApplicationEngine? = null
+    private val client = HttpClient { install(ClientWebSockets) }
+    private var clientSession: DefaultClientWebSocketSession? = null
 
-// Outras classes de mensagens de rede podem ser definidas aqui
-
-class NetworkManager(private val context: Context) {
-
-    private val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+    private val nsdManager by lazy { _context?.getSystemService(Context.NSD_SERVICE) as? NsdManager }
     private var registrationListener: NsdManager.RegistrationListener? = null
     private var discoveryListener: NsdManager.DiscoveryListener? = null
-    private var resolveListener: NsdManager.ResolveListener? = null
 
-    private val SERVICE_TYPE = "_magevoice._tcp" // Formato: _<protocolo>._<transporte>
-    private val SERVICE_NAME_PREFIX = "MageVoiceHost"
-    private var hostServiceName: String? = null
+    private var _context: Context? = null
 
-    private var serverSocket: ServerSocket? = null
-    private var clientSocket: Socket? = null // Para o cliente se conectar ao host
-    private val connectedClients = mutableListOf<Socket>() // Para o host gerenciar múltiplos clientes
+    private val sessions = ConcurrentHashMap<String, WebSocketSession>()
+    private val _gameState = MutableStateFlow(GameState())
+    val clientGameState = _gameState.asStateFlow()
 
-    var onPlayerDiscovered: ((Player) -> Unit)? = null // Placeholder, precisa de mais info
-    var onPlayerDisconnected: ((String) -> Unit)? = null
-    var onGameStateReceived: ((GameStateUpdate) -> Unit)? = null
-    var onSpellCastReceived: ((SpellCastAction) -> Unit)? = null
-    var onConnectedAsHost: (() -> Unit)? = null
-    var onConnectedAsClient: ((InetAddress, Int) -> Unit)? = null
-    var onConnectionFailed: ((String) -> Unit)? = null
-    var onDiscoveryStopped: (() -> Unit)? = null
-    var onServiceRegistered: ((String) -> Unit)? = null
+    private val _discoveredServices = MutableStateFlow<List<NsdServiceInfo>>(emptyList())
+    val discoveredServices = _discoveredServices.asStateFlow()
 
+    private val scope = CoroutineScope(Dispatchers.IO + Job())
 
-    private val handler = Handler(Looper.getMainLooper())
-    private val TAG = "NetworkManager"
-    private var currentPort: Int = -1
+    fun init(context: Context) {
+        _context = context.applicationContext
+    }
 
-    // --- Servidor / Host ---
-    fun startHost(playerName: String) {
-        try {
-            // Escolher uma porta disponível
-            serverSocket = ServerSocket(0).also { currentPort = it.localPort }
-            Log.d(TAG, "Host started on port $currentPort")
-            hostServiceName = "$SERVICE_NAME_PREFIX-$playerName-${System.currentTimeMillis() % 10000}"
-            registerService(currentPort, hostServiceName!!)
+    fun startServer(localPlayerId: String) {
+        if (server != null) return
+        Log.i(TAG, "Starting server...")
 
-            // Iniciar thread para aceitar conexões de clientes
-            Thread {
-                try {
-                    while (!serverSocket!!.isClosed) {
-                        val client = serverSocket!!.accept()
-                        Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}")
-                        connectedClients.add(client)
-                        // TODO: Iniciar thread para lidar com este cliente (receber dados)
-                        // TODO: Enviar informações iniciais do jogo para este cliente
-                        // TODO: Informar outros clientes sobre o novo jogador
-                    }
-                } catch (e: IOException) {
-                    if (serverSocket?.isClosed == false) {
-                        Log.e(TAG, "ServerSocket accept error: ${e.message}", e)
-                    } else {
-                        Log.d(TAG, "ServerSocket closed, accept loop ended.")
+        val hostPlayer = PlayerState(id = localPlayerId, position = Vector3(), velocity = Vector2(0f, 0f), rotation = 0f, hp = 100, mana = 100)
+        _gameState.value = GameState(players = mapOf(localPlayerId to hostPlayer))
+
+        server = embeddedServer(CIO, port = PORT) {
+            install(ServerWebSockets)
+            routing {
+                webSocket("/game") {
+                    val playerId = call.request.queryParameters["id"] ?: return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Player ID required"))
+                    sessions[playerId] = this
+                    Log.i(TAG, "Client connected: $playerId")
+
+                    val newPlayer = PlayerState(id = playerId, position = Vector3(), velocity = Vector2(0f, 0f), rotation = 0f, hp = 100, mana = 100)
+                    _gameState.update { it.copy(players = it.players + (playerId to newPlayer)) }
+
+                    try {
+                        for (frame in incoming) {
+                            if (frame is Frame.Text) {
+                                handleAction(frame.readText())
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in WebSocket session for $playerId: ${e.message}")
+                    } finally {
+                        Log.i(TAG, "Client disconnected: $playerId")
+                        sessions.remove(playerId)
+                        _gameState.update { it.copy(players = it.players - playerId) }
                     }
                 }
-            }.start()
-            handler.post { onConnectedAsHost?.invoke() }
+            }
+        }.start(wait = false)
 
-        } catch (e: IOException) {
-            Log.e(TAG, "Could not start host: ${e.message}", e)
-            handler.post { onConnectionFailed?.invoke("Falha ao iniciar host: ${e.message}") }
-            cleanupHost()
+        scope.launch {
+            _gameState.collect { state ->
+                val stateJson = Json.encodeToString(state)
+                sessions.values.forEach { session ->
+                    try {
+                        session.send(Frame.Text(stateJson))
+                    } catch (e: Exception) { /* Ignore */ }
+                }
+            }
         }
+        registerNsdService()
+        Log.i(TAG, "Server started on port $PORT")
     }
 
-
-    // --- Cliente ---
-    fun discoverHosts() {
-        if (discoveryListener != null) {
-            Log.d(TAG, "Discovery already active or not cleaned up. Stopping previous.")
-            stopDiscovery() // Garante que a descoberta anterior seja interrompida
-        }
-        initializeDiscoveryListener() // Reinicializa para evitar problemas de estado
-        nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-        Log.d(TAG, "Starting service discovery for $SERVICE_TYPE")
-    }
-
-    fun connectToHost(serviceInfo: NsdServiceInfo) {
-        Log.d(TAG, "Attempting to connect to host: ${serviceInfo.serviceName} at ${serviceInfo.host}:${serviceInfo.port}")
-        Thread {
-            try {
-                clientSocket = Socket(serviceInfo.host, serviceInfo.port)
-                Log.d(TAG, "Connected to host: ${serviceInfo.hostName} on port ${serviceInfo.port}")
-                // TODO: Iniciar thread para receber dados do host
-                // TODO: Enviar informações do jogador local para o host
-                handler.post { onConnectedAsClient?.invoke(serviceInfo.host, serviceInfo.port) }
-            } catch (e: IOException) {
-                Log.e(TAG, "Could not connect to host: ${e.message}", e)
-                handler.post { onConnectionFailed?.invoke("Falha ao conectar ao host: ${e.message}") }
-                clientSocket?.close()
-                clientSocket = null
-            }
-        }.start()
-    }
-
-    // --- NSD (Network Service Discovery) ---
-    private fun registerService(port: Int, serviceName: String) {
-        if (registrationListener != null) {
-            Log.w(TAG, "Service already registered or listener not null. Attempting to unregister first.")
-            // Tentar cancelar registro anterior pode ser problemático se o listener estiver em uso
-            // Idealmente, garantir que cleanupHost/stopDiscovery limpem o listener.
-            try {
-                nsdManager.unregisterService(registrationListener)
-            } catch (e: Exception) { Log.w(TAG, "Error unregistering previous service during register: ${e.message}") }
-            registrationListener = null // Forçar reinicialização
-        }
-
-        val serviceInfo = NsdServiceInfo().apply {
-            this.serviceName = serviceName
-            this.serviceType = SERVICE_TYPE
-            this.port = port
-        }
-
-        registrationListener = object : NsdManager.RegistrationListener {
-            override fun onServiceRegistered(NsdServiceInfo: NsdServiceInfo) {
-                this@NetworkManager.hostServiceName = NsdServiceInfo.serviceName
-                Log.d(TAG, "Service registered: ${NsdServiceInfo.serviceName}")
-                handler.post{ onServiceRegistered?.invoke(NsdServiceInfo.serviceName) }
-            }
-            override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.e(TAG, "Service registration failed. Error code: $errorCode")
-                handler.post { onConnectionFailed?.invoke("Falha ao registrar serviço NSD: $errorCode") }
-                cleanupHost() // Limpar se o registro falhar
-            }
-            override fun onServiceUnregistered(arg0: NsdServiceInfo) {
-                Log.d(TAG, "Service unregistered: ${arg0.serviceName}")
-            }
-            override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.e(TAG, "Service unregistration failed. Error code: $errorCode")
-            }
-        }
+    private fun handleAction(json: String) {
         try {
-            nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+            when (val action = Json.decodeFromString<Action>(json)) {
+                is UpdatePosition -> {
+                    _gameState.update {
+                        val updatedPlayers = it.players.toMutableMap()
+                        val player = updatedPlayers[action.playerId]
+                        if (player != null) {
+                            updatedPlayers[action.playerId] = player.copy(velocity = action.velocity)
+                        }
+                        it.copy(players = updatedPlayers)
+                    }
+                }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during registerService: ${e.message}", e)
-            handler.post { onConnectionFailed?.invoke("Exceção ao registrar serviço: ${e.message}") }
+            Log.e(TAG, "Error decoding action: $e")
         }
     }
 
-    private fun initializeDiscoveryListener() {
-        discoveryListener = object : NsdManager.DiscoveryListener {
-            override fun onDiscoveryStarted(regType: String) {
-                Log.d(TAG, "Service discovery started for $regType")
-            }
+    fun stopServer() {
+        Log.i(TAG, "Stopping server...")
+        unregisterNsdService()
+        server?.stop(1000, 5000)
+        server = null
+        sessions.clear()
+    }
 
+    fun startDiscovery() {
+        stopDiscovery()
+        discoveryListener = object : NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(regType: String) { Log.d(TAG, "Discovery started.") }
             override fun onServiceFound(service: NsdServiceInfo) {
-                Log.d(TAG, "Service found: ${service.serviceName}, type: ${service.serviceType}")
-                if (service.serviceType == SERVICE_TYPE && service.serviceName != hostServiceName) {
-                    // Serviço é do tipo correto e não é o próprio host
-                    // Precisamos resolver o serviço para obter IP e porta
-                    if (resolveListener != null) {
-                        // Evitar múltiplas resoluções simultâneas para o mesmo serviço se já estiver em progresso
-                        // Uma abordagem mais robusta gerenciaria uma fila de serviços para resolver.
-                        Log.w(TAG, "Resolve listener already active. Skipping resolve for ${service.serviceName} for now.")
-                        return
-                    }
-                    initializeResolveListener()
-                    nsdManager.resolveService(service, resolveListener)
-                } else if (service.serviceName == hostServiceName) {
-                    Log.d(TAG, "Found own service: ${service.serviceName}. Ignoring.")
+                if (service.serviceType == SERVICE_TYPE) {
+                    nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
+                        override fun onServiceResolved(resolvedService: NsdServiceInfo) {
+                            val currentList = _discoveredServices.value.toMutableList()
+                            if (currentList.none { it.serviceName == resolvedService.serviceName }) {
+                                currentList.add(resolvedService)
+                                _discoveredServices.value = currentList
+                            }
+                        }
+                        override fun onResolveFailed(si: NsdServiceInfo, ec: Int) { Log.e(TAG, "Resolve failed: $ec") }
+                    })
                 }
             }
-
             override fun onServiceLost(service: NsdServiceInfo) {
-                Log.e(TAG, "Service lost: ${service.serviceName}")
-                // TODO: Handle service lost (e.g., remove from a list of available hosts)
+                _discoveredServices.value = _discoveredServices.value.filter { it.serviceName != service.serviceName }
             }
-
-            override fun onDiscoveryStopped(serviceType: String) {
-                Log.i(TAG, "Discovery stopped: $serviceType")
-                handler.post { onDiscoveryStopped?.invoke() }
-            }
-
-            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "Discovery failed to start. Error code: $errorCode")
-                nsdManager.stopServiceDiscovery(this)
-                handler.post { onConnectionFailed?.invoke("Falha ao iniciar descoberta NSD: $errorCode") }
-            }
-
-            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "Discovery failed to stop. Error code: $errorCode")
-                // Non-critical, but good to log
-            }
+            override fun onDiscoveryStopped(st: String) { Log.d(TAG, "Discovery stopped.") }
+            override fun onStartDiscoveryFailed(st: String, ec: Int) { Log.e(TAG, "Discovery start failed: $ec") }
+            override fun onStopDiscoveryFailed(st: String, ec: Int) { Log.e(TAG, "Discovery stop failed: $ec") }
         }
+        nsdManager?.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
-    private fun initializeResolveListener() {
-        resolveListener = object : NsdManager.ResolveListener {
-            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.e(TAG, "Resolve failed for ${serviceInfo.serviceName}. Error code: $errorCode")
-                this@NetworkManager.resolveListener = null // Permitir nova tentativa de resolução
-            }
-
-            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                Log.i(TAG, "Service resolved: ${serviceInfo.serviceName} host: ${serviceInfo.host}, port: ${serviceInfo.port}")
-                // Agora podemos nos conectar a este serviço
-                // Para uma UI, você adicionaria isso a uma lista de hosts disponíveis
-                // e permitiria que o usuário selecionasse um para chamar connectToHost(serviceInfo).
-                // Por enquanto, vamos chamar um callback genérico.
-                // onHostFound(serviceInfo) -> a GameActivity decidiria conectar ou mostrar na UI
-
-                // Exemplo:
-                // if (algumaCondicaoParaConectarAutomaticamente) {
-                // connectToHost(serviceInfo)
-                // } else {
-                // gameActivity.addAvailableHost(serviceInfo)
-                // }
-                // Vamos supor que a GameActivity vai gerenciar uma lista e decidir quando conectar.
-                // Para este exemplo, não vamos conectar automaticamente.
-                // A GameActivity precisará de uma forma de obter esses serviceInfo.
-                 // Por ora, vamos invocar o onPlayerDiscovered, que é um placeholder
-                val discoveredPlayerHost = Player( // Esta é uma representação MUITO simplificada
-                    position = Vector3(), rotation = 0f, hp = 100, mana = 100,
-                    id = serviceInfo.serviceName // Usar nome do serviço como ID temporário
-                )
-                // O ideal é ter um callback onHostFound(NsdServiceInfo)
-                handler.post { onPlayerDiscovered?.invoke(discoveredPlayerHost) } // Isto é um placeholder!
-
-                this@NetworkManager.resolveListener = null // Permitir nova tentativa de resolução para outros serviços
-            }
-        }
-    }
-
 
     fun stopDiscovery() {
         if (discoveryListener != null) {
+            nsdManager?.stopServiceDiscovery(discoveryListener)
+            discoveryListener = null
+            _discoveredServices.value = emptyList()
+        }
+    }
+
+    fun connectToServer(serviceInfo: NsdServiceInfo, localPlayerId: String) {
+        scope.launch {
             try {
-                nsdManager.stopServiceDiscovery(discoveryListener)
+                client.webSocket(method = HttpMethod.Get, host = serviceInfo.host.hostAddress, port = PORT, path = "/game?id=$localPlayerId") {
+                    clientSession = this
+                    Log.i(TAG, "Connected to server!")
+                    for (frame in incoming) {
+                        if (frame is Frame.Text) {
+                            val state = Json.decodeFromString<GameState>(frame.readText())
+                            _gameState.value = state
+                        }
+                    }
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Error stopping discovery: ${e.message}", e)
+                Log.e(TAG, "Failed to connect: ${e.message}")
             } finally {
-                discoveryListener = null
+                Log.i(TAG, "Disconnected.")
+                clientSession = null
             }
         }
-         if (resolveListener != null) { // Também limpar resolve listener se estiver ativo
-            resolveListener = null // Apenas definir como nulo, pois não há "stopResolve"
+    }
+
+    fun sendAction(action: Action) {
+        scope.launch {
+            if (clientSession?.coroutineContext?.get(Job)?.isActive == true) {
+                try {
+                    clientSession?.send(Frame.Text(Json.encodeToString(action)))
+                } catch (e: Exception) { Log.e(TAG, "Failed to send action: ${e.message}") }
+            }
         }
     }
 
-    // --- Comunicação de Dados (Placeholders) ---
-    fun sendGameState(state: GameStateUpdate) {
-        // TODO: Serializar 'state' (e.g., para JSON com Kotlinx Serialization)
-        // TODO: Enviar via TCP para o host (se cliente) ou para todos os clientes (se host) via seus Sockets
-        // TODO: Ou enviar via UDP para atualizações frequentes
+    fun disconnect() {
+        scope.launch {
+            clientSession?.close()
+            clientSession = null
+        }
     }
 
-    fun sendSpellCast(action: SpellCastAction) {
-        // TODO: Serializar 'action'
-        // TODO: Enviar via TCP
+    private fun registerNsdService() {
+        if (registrationListener != null) return
+        val serviceInfo = NsdServiceInfo().apply {
+            serviceName = SERVICE_NAME
+            serviceType = SERVICE_TYPE
+            port = PORT
+        }
+        registrationListener = object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(si: NsdServiceInfo) { Log.i(TAG, "NSD service registered") }
+            override fun onRegistrationFailed(si: NsdServiceInfo, ec: Int) { Log.e(TAG, "NSD registration failed: $ec") }
+            override fun onServiceUnregistered(si: NsdServiceInfo) { Log.i(TAG, "NSD service unregistered") }
+            override fun onUnregistrationFailed(si: NsdServiceInfo, ec: Int) { Log.e(TAG, "NSD unregistration failed: $ec") }
+        }
+        nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
     }
 
-    // --- Limpeza ---
-    fun cleanup() {
-        Log.d(TAG, "NetworkManager cleanup initiated.")
-        stopDiscovery()
-        cleanupHost()
-        cleanupClient()
-    }
-
-    private fun cleanupHost() {
+    private fun unregisterNsdService() {
         if (registrationListener != null) {
-            try {
-                nsdManager.unregisterService(registrationListener)
-            } catch (e: IllegalArgumentException) {
-                Log.w(TAG, "Error unregistering service (already unregistered or invalid): ${e.message}")
-            } catch (e: Exception) {
-                 Log.e(TAG, "Exception during unregisterService: ${e.message}", e)
-            }
+            nsdManager?.unregisterService(registrationListener)
             registrationListener = null
         }
-        try {
-            serverSocket?.close()
-            Log.d(TAG, "ServerSocket closed.")
-        } catch (e: IOException) {
-            Log.e(TAG, "Error closing server socket: ${e.message}", e)
-        }
-        serverSocket = null
-        currentPort = -1
-        hostServiceName = null
-        connectedClients.forEach { try { it.close() } catch (e: IOException) {} }
-        connectedClients.clear()
-        Log.d(TAG,"Host cleanup complete.")
-    }
-
-    private fun cleanupClient() {
-        try {
-            clientSocket?.close()
-            Log.d(TAG, "ClientSocket closed.")
-        } catch (e: IOException) {
-            Log.e(TAG, "Error closing client socket: ${e.message}", e)
-        }
-        clientSocket = null
-        Log.d(TAG,"Client cleanup complete.")
     }
 }

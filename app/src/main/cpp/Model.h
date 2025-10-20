@@ -1,34 +1,29 @@
 #ifndef MAGEVOICE_MODEL_H
 #define MAGEVOICE_MODEL_H
 
-#include <GLES3/gl3.h>
-#include <memory>
+#include <string>
+#include <map>
 
-#include "Vertex.h"
-#include "TextureAsset.h"
+// Simple 2D Vector
+struct Vector2 {
+    float x = 0.0f;
+    float y = 0.0f;
+};
 
-class Model {
-public:
-    Model(const Vertex* vertices, size_t vertex_count, const GLushort* indices, GLsizei index_count, std::shared_ptr<TextureAsset> texture) :
-        vertex_data_(vertices),
-        vertex_count_(vertex_count),
-        index_data_(indices),
-        index_count_(index_count),
-        texture_(texture) {}
+// State for a single player
+struct PlayerState {
+    Vector2 position;
+    Vector2 velocity;
+    int hp = 100;
+    int mana = 100;
+};
 
-    ~Model() = default;
-
-    const Vertex* getVertexData() const { return vertex_data_; }
-    const GLushort* getIndexData() const { return index_data_; }
-    GLsizei getIndexCount() const { return index_count_; }
-    const TextureAsset& getTexture() const { return *texture_; }
-
-private:
-    const Vertex* vertex_data_;
-    size_t vertex_count_;
-    const GLushort* index_data_;
-    GLsizei index_count_;
-    std::shared_ptr<TextureAsset> texture_;
+// Represents the entire game world state
+struct Model {
+    // Map of player IDs to their states. The local player's ID should also be in this map.
+    std::map<std::string, PlayerState> players;
+    // In the future, we can add lists of enemies, projectiles, etc.
+    // std::vector<EnemyState> enemies;
 };
 
 #endif //MAGEVOICE_MODEL_H

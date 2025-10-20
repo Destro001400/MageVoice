@@ -9,7 +9,6 @@
 #include "AndroidOut.h"
 #include "Shader.h"
 #include "Utility.h"
-#include "GameState.h"
 #include "Model.h"
 #include "Vertex.h"
 
@@ -132,6 +131,7 @@ void Renderer::init(ANativeWindow* window) {
     auto dummyTexture = std::make_shared<TextureAsset>(dummyTextureId);
 
     LOGI("Creating player model");
+    // This is the mesh and texture for a player, it will be reused for all players.
     playerModel_ = std::make_unique<Model>(g_playerVertices, 4, g_playerIndices, 6, dummyTexture);
 
     glEnable(GL_DEPTH_TEST);
@@ -140,32 +140,41 @@ void Renderer::init(ANativeWindow* window) {
     LOGI("Renderer::init() finished");
 }
 
-void Renderer::update(GameState& model) {
+// Update logic now iterates through all players
+void Renderer::update(Model& model) {
     const float speed = 0.1f;
-    model.player.position.x += model.player.velocity.x * speed;
-    model.player.position.y -= model.player.velocity.y * speed;
-
     float aspect = float(width_) / height_;
     float worldHalfWidth = kProjectionHalfHeight * aspect;
     float worldHalfHeight = kProjectionHalfHeight;
 
-    if (model.player.position.x > worldHalfWidth) model.player.position.x = worldHalfWidth;
-    if (model.player.position.x < -worldHalfWidth) model.player.position.x = -worldHalfWidth;
-    if (model.player.position.y > worldHalfHeight) model.player.position.y = worldHalfHeight;
-    if (model.player.position.y < -worldHalfHeight) model.player.position.y = -worldHalfHeight;
+    for (auto& pair : model.players) {
+        PlayerState& player = pair.second;
+        player.position.x += player.velocity.x * speed;
+        player.position.y -= player.velocity.y * speed;
+
+        // World boundaries check
+        if (player.position.x > worldHalfWidth) player.position.x = worldHalfWidth;
+        if (player.position.x < -worldHalfWidth) player.position.x = -worldHalfWidth;
+        if (player.position.y > worldHalfHeight) player.position.y = worldHalfHeight;
+        if (player.position.y < -worldHalfHeight) player.position.y = -worldHalfHeight;
+    }
 }
 
-void Renderer::render(const GameState& model) {
+// Render logic now iterates through all players
+void Renderer::render(const Model& model) {
     if (display_ == EGL_NO_DISPLAY || !shader_) return;
 
     updateRenderArea();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (playerModel_) {
-        float playerModelMatrix[16] = {0};
-        Utility::buildTranslationMatrix(playerModelMatrix, model.player.position.x, model.player.position.y, 0.0f);
-        shader_->setModelMatrix(playerModelMatrix);
-        shader_->drawModel(*playerModel_);
+        for (const auto& pair : model.players) {
+            const PlayerState& player = pair.second;
+            float playerModelMatrix[16] = {0};
+            Utility::buildTranslationMatrix(playerModelMatrix, player.position.x, player.position.y, 0.0f);
+            shader_->setModelMatrix(playerModelMatrix);
+            shader_->drawModel(*playerModel_);
+        }
     }
 
     if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {

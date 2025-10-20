@@ -12,7 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.game.voicespells.databinding.ActivityGameBinding
 import com.game.voicespells.game.entities.Player
-import com.game.voicespells.game.entities.Vector3
+import com.game.voicespells.utils.Vector3
 import com.game.voicespells.game.spells.*
 import com.game.voicespells.ui.views.JoystickView
 import com.game.voicespells.ui.views.GameRenderer // Import GameRenderer

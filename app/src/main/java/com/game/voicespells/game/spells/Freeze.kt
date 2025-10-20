@@ -2,7 +2,7 @@ package com.game.voicespells.game.spells
 
 import android.util.Log
 import com.game.voicespells.game.entities.Player
-import com.game.voicespells.game.entities.Vector3
+import com.game.voicespells.utils.Vector3
 import kotlin.math.sqrt // Already imported in Fireball, but good practice to keep it per file if used.
 
 class Freeze : Spell() {
