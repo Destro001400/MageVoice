@@ -4,6 +4,7 @@
 #include <GLES3/gl3.h>
 #include <android/native_window.h>
 #include <memory>
+#include <android/log.h>
 
 #include "AndroidOut.h"
 #include "Shader.h"
@@ -11,6 +12,10 @@
 #include "GameState.h"
 #include "Model.h"
 #include "Vertex.h"
+
+#define LOG_TAG "MageVoiceNative"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 #define CORNFLOWER_BLUE 100 / 255.f, 149 / 255.f, 237 / 255.f, 1.0f
 
@@ -63,17 +68,16 @@ Renderer::Renderer() :
     context_(EGL_NO_CONTEXT),
     width_(0),
     height_(0),
-    shaderNeedsNewProjectionMatrix_(true) {}
+    shaderNeedsNewProjectionMatrix_(true) {
+    LOGI("Renderer constructor");
+}
 
 Renderer::~Renderer() {
+    LOGI("Renderer destructor");
     if (display_ != EGL_NO_DISPLAY) {
         eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (context_ != EGL_NO_CONTEXT) {
-            eglDestroyContext(display_, context_);
-        }
-        if (surface_ != EGL_NO_SURFACE) {
-            eglDestroySurface(display_, surface_);
-        }
+        if (context_ != EGL_NO_CONTEXT) eglDestroyContext(display_, context_);
+        if (surface_ != EGL_NO_SURFACE) eglDestroySurface(display_, surface_);
         eglTerminate(display_);
     }
     display_ = EGL_NO_DISPLAY;
@@ -82,32 +86,42 @@ Renderer::~Renderer() {
 }
 
 void Renderer::init(ANativeWindow* window) {
+    LOGI("Renderer::init() start");
     const EGLint attribs[] = { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 16, EGL_NONE };
     EGLConfig config;
     EGLint numConfigs;
 
+    LOGI("Calling eglGetDisplay");
     display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    eglInitialize(display_, nullptr, nullptr);
-    eglChooseConfig(display_, attribs, &config, 1, &numConfigs);
+    if (display_ == EGL_NO_DISPLAY) { LOGE("eglGetDisplay failed"); return; }
 
+    LOGI("Calling eglInitialize");
+    if (!eglInitialize(display_, nullptr, nullptr)) { LOGE("eglInitialize failed"); return; }
+
+    LOGI("Calling eglChooseConfig");
+    if (!eglChooseConfig(display_, attribs, &config, 1, &numConfigs)) { LOGE("eglChooseConfig failed"); return; }
+
+    LOGI("Calling eglCreateContext");
     const EGLint context_attribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
     context_ = eglCreateContext(display_, config, nullptr, context_attribs);
+    if (context_ == EGL_NO_CONTEXT) { LOGE("eglCreateContext failed"); return; }
 
+    LOGI("Calling eglCreateWindowSurface");
     surface_ = eglCreateWindowSurface(display_, config, window, nullptr);
+    if (surface_ == EGL_NO_SURFACE) { LOGE("eglCreateWindowSurface failed"); return; }
 
-    eglMakeCurrent(display_, surface_, surface_, context_);
+    LOGI("Calling eglMakeCurrent");
+    if (!eglMakeCurrent(display_, surface_, surface_, context_)) { LOGE("eglMakeCurrent failed"); return; }
 
+    LOGI("Calling eglQuerySurface");
     eglQuerySurface(display_, surface_, EGL_WIDTH, &width_);
     eglQuerySurface(display_, surface_, EGL_HEIGHT, &height_);
 
-    // Initialize shader
+    LOGI("Loading shader");
     shader_.reset(Shader::loadShader(VERTEX_SHADER, FRAGMENT_SHADER, "aPosition", "aUV", "uProjectionMatrix", "uModelMatrix"));
-    if (!shader_) {
-        aout << "Failed to load shader" << std::endl;
-        return;
-    }
+    if (!shader_) { LOGE("Shader::loadShader failed"); return; }
 
-    // Create a dummy 1x1 white texture
+    LOGI("Creating dummy texture");
     GLuint dummyTextureId;
     glGenTextures(1, &dummyTextureId);
     glBindTexture(GL_TEXTURE_2D, dummyTextureId);
@@ -117,20 +131,20 @@ void Renderer::init(ANativeWindow* window) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     auto dummyTexture = std::make_shared<TextureAsset>(dummyTextureId);
 
-    // Initialize player model
+    LOGI("Creating player model");
     playerModel_ = std::make_unique<Model>(g_playerVertices, 4, g_playerIndices, 6, dummyTexture);
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(CORNFLOWER_BLUE);
     shader_->activate();
+    LOGI("Renderer::init() finished");
 }
 
 void Renderer::update(GameState& model) {
-    const float speed = 0.1f; // Player movement speed
+    const float speed = 0.1f;
     model.player.position.x += model.player.velocity.x * speed;
-    model.player.position.y -= model.player.velocity.y * speed; // Y is inverted in screen coordinates
+    model.player.position.y -= model.player.velocity.y * speed;
 
-    // Boundary checks
     float aspect = float(width_) / height_;
     float worldHalfWidth = kProjectionHalfHeight * aspect;
     float worldHalfHeight = kProjectionHalfHeight;
@@ -142,22 +156,11 @@ void Renderer::update(GameState& model) {
 }
 
 void Renderer::render(const GameState& model) {
-    if (display_ == EGL_NO_DISPLAY || !shader_) {
-        return;
-    }
+    if (display_ == EGL_NO_DISPLAY || !shader_) return;
 
     updateRenderArea();
-
-    if (shaderNeedsNewProjectionMatrix_) {
-        float projectionMatrix[16] = {0};
-        Utility::buildOrthographicMatrix(projectionMatrix, kProjectionHalfHeight, float(width_) / height_, kProjectionNearPlane, kProjectionFarPlane);
-        shader_->setProjectionMatrix(projectionMatrix);
-        shaderNeedsNewProjectionMatrix_ = false;
-    }
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Render Player
     if (playerModel_) {
         float playerModelMatrix[16] = {0};
         Utility::buildTranslationMatrix(playerModelMatrix, model.player.position.x, model.player.position.y, 0.0f);
@@ -165,12 +168,12 @@ void Renderer::render(const GameState& model) {
         shader_->drawModel(*playerModel_);
     }
 
-    eglSwapBuffers(display_, surface_);
+    if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
+        LOGE("eglSwapBuffers failed!");
+    }
 }
 
-void Renderer::handleInput() {
-    // Not used in this architecture
-}
+void Renderer::handleInput() {}
 
 void Renderer::updateRenderArea() {
     EGLint currentWidth = 0, currentHeight = 0;

@@ -4,32 +4,37 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#303040" 
     tools:context=".ui.activities.MainActivity">
 
-    <!-- A simple thematic background color, replace #303040 with a drawable for a better theme -->
+    <!-- Um background temático de fantasia seria ideal aqui,
+         mas requer um recurso drawable que não posso criar.
+         Você pode adicionar android:background="@drawable/fantasy_background" -->
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_play"
+        android:id="@+id/buttonPlay"
         style="@style/Widget.Material3.Button.ElevatedButton"
         android:layout_width="0dp"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginEnd="32dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         android:text="Jogar"
         android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/button_configure_spells"
+        app:layout_constraintBottom_toTopOf="@+id/buttonConfigureSpells"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_configure_spells"
+        android:id="@+id/buttonConfigureSpells"
         style="@style/Widget.Material3.Button.ElevatedButton"
         android:layout_width="0dp"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginEnd="32dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         android:text="Configurar Magias"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -38,17 +43,19 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_settings"
+        android:id="@+id/buttonSettings"
         style="@style/Widget.Material3.Button.ElevatedButton"
         android:layout_width="0dp"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="32dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         android:text="Configurações"
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_configure_spells" />
+        app:layout_constraintTop_toBottomOf="@+id/buttonConfigureSpells" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

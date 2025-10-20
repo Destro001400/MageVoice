@@ -4,11 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".presentation.activities.GameActivity">
+    tools:context=".ui.activities.GameActivity">
 
-    <!-- Game Surface -->
     <SurfaceView
-        android:id="@+id/game_surface"
+        android:id="@+id/surfaceViewGame"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -16,77 +15,63 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Player Stats (HP/MP) -->
-    <LinearLayout
-        android:id="@+id/stats_container"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <TextView
-            android:id="@+id/hp_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="HP: 100"
-            android:textColor="@android:color/white"
-            android:shadowColor="@android:color/black"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="2"/>
-
-        <TextView
-            android:id="@+id/mp_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="MP: 100"
-            android:textColor="@android:color/white"
-            android:shadowColor="@android:color/black"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="2"/>
-    </LinearLayout>
-
-    <!-- Score -->
-    <TextView
-        android:id="@+id/score_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Score: 0 | 0"
-        android:textColor="@android:color/white"
-        android:layout_marginEnd="16dp"
-        app:layout_constraintBottom_toBottomOf="@id/mic_button"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/mic_button"
-        android:shadowColor="@android:color/black"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="2"/>
-
-    <!-- Microphone Button -->
-    <Button
-        android:id="@+id/mic_button"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:layout_marginBottom="16dp"
-        android:text="MIC"
+    <!-- HUD Overlay -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/hudOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <!-- Placeholder for Virtual Joystick -->
-    <View
-        android:id="@+id/joystick_placeholder"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:background="#80FFFFFF"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="32dp"
-        android:layout_marginBottom="32dp"/>
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- TextViews for HP and Mana removed as GameRenderer will draw them -->
+
+        <com.game.voicespells.ui.views.JoystickView
+            android:id="@+id/joystickViewLeft"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginBottom="32dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+
+        <!-- Placeholder for Camera Control (Right) -->
+        <!-- Similar ao joystick, pode ser uma área de toque ou outro joystick. -->
+        <FrameLayout
+            android:id="@+id/cameraControlPlaceholder"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="32dp"
+            android:background="#40FFFFFF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Controle Câmera"
+                android:textColor="#FFFFFF"
+                android:layout_gravity="center"/>
+        </FrameLayout>
+
+
+        <ImageButton
+            android:id="@+id/buttonMicrophone"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/mic_button_background"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:scaleType="fitCenter"
+            android:contentDescription="Microphone Button"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:tint="@android:color/white" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

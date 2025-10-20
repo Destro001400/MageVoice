@@ -13,27 +13,27 @@ import androidx.appcompat.app.AppCompatActivity
 import com.game.voicespells.databinding.ActivityGameBinding
 import com.game.voicespells.game.entities.Player
 import com.game.voicespells.game.entities.Vector3
-import com.game.voicespells.game.spells.* // Import all basic spells
+import com.game.voicespells.game.spells.*
+import com.game.voicespells.ui.views.JoystickView
+import com.game.voicespells.ui.views.GameRenderer // Import GameRenderer
 import com.game.voicespells.voice.VoiceRecognitionManager
 import com.game.voicespells.utils.GameConfig
 // import com.game.voicespells.network.NetworkManager // For later
-// import com.game.voicespells.ui.views.GameRenderer // For later
 import java.util.UUID
 
 class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     private lateinit var binding: ActivityGameBinding
     private lateinit var voiceManager: VoiceRecognitionManager
-    // private var gameRenderer: GameRenderer? = null // To be implemented in Phase 2
-    // private var networkManager: NetworkManager? = null // To be implemented in Phase 2
+    private var gameRenderer: GameRenderer? = null // Descomentado
+    // private var networkManager: NetworkManager? = null
 
     private lateinit var localPlayer: Player
-    private val otherPlayers = mutableListOf<Player>() // For multiplayer later
+    private val otherPlayers = mutableListOf<Player>()
 
     private val gameLoopHandler = Handler(Looper.getMainLooper())
     private var lastFrameTime: Long = 0
 
-    // Basic Spell instances (Player's selectedSpells would ideally come from selection screen)
     private val availableSpells: Map<SpellType, Spell> = mapOf(
         SpellType.FIREBALL to Fireball(),
         SpellType.FREEZE to Freeze(),
@@ -42,16 +42,11 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         SpellType.GUST to Gust()
     )
 
-    // Touch input state for joystick and camera
-    private var joystickDown = false
-    private var joystickCenterX = 0f
-    private var joystickCenterY = 0f
-    private var joystickCurrentX = 0f
-    private var joystickCurrentY = 0f
+    private var joystickInputNormalizedX: Float = 0f
+    private var joystickInputNormalizedY: Float = 0f
 
     private var cameraTouchDown = false
     private var lastCameraTouchX = 0f
-    // private var lastCameraTouchY = 0f // If vertical camera movement is also needed
 
     private val TAG = "GameActivity"
 
@@ -60,33 +55,24 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         binding = ActivityGameBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize Player
-        // ID should be unique, perhaps from NetworkManager or a local UUID for now
         localPlayer = Player(
-            position = Vector3(0f, 0f, 0f), // Starting position
+            position = Vector3(0f, 0f, 0f),
             rotation = 0f,
             id = "player_${UUID.randomUUID()}",
-            selectedSpells = availableSpells.values.toList() // Give all basic spells for now
+            selectedSpells = availableSpells.values.toList()
         )
 
-        // Initialize Voice Recognition
         voiceManager = VoiceRecognitionManager(this)
         setupVoiceRecognitionCallbacks()
-
-        // Initialize UI elements and listeners
-        setupUI()
-
-        // Initialize SurfaceView for rendering (basic for now)
+        setupUI() // updateHud() será chamado pelo renderer agora
         binding.surfaceViewGame.holder.addCallback(this)
 
-        // Hide system UI for fullscreen experience
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
-
         Log.d(TAG, "GameActivity onCreate completed.")
     }
 
@@ -94,48 +80,27 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private fun setupUI() {
         binding.buttonMicrophone.setOnTouchListener { _, event ->
             handleMicrophoneTouchEvent(event)
-            true // Consume the event
-        }
-
-        updateHud()
-
-        // Setup joystick placeholder touch listener
-        binding.joystickLeftPlaceholder.setOnTouchListener { _, event ->
-            handleJoystickTouchEvent(event, binding.joystickLeftPlaceholder)
             true
         }
 
-        // Setup camera control placeholder touch listener
+        // updateHud() // Removido - GameRenderer vai cuidar disso
+
+        binding.joystickViewLeft.setJoystickListener(object : JoystickView.JoystickListener {
+            override fun onJoystickMoved(xPercent: Float, yPercent: Float, angle: Double, strength: Float) {
+                joystickInputNormalizedX = xPercent
+                joystickInputNormalizedY = yPercent
+            }
+
+            override fun onJoystickReleased() {
+                joystickInputNormalizedX = 0f
+                joystickInputNormalizedY = 0f
+                Log.d(TAG, "Joystick Released")
+            }
+        })
+
         binding.cameraControlPlaceholder.setOnTouchListener { _, event ->
             handleCameraTouchEvent(event)
             true
-        }
-    }
-
-    private fun handleJoystickTouchEvent(event: MotionEvent, joystickView: View) {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                joystickDown = true
-                // Initial center based on where the touch started within the view, or fixed center
-                joystickCenterX = joystickView.width / 2f
-                joystickCenterY = joystickView.height / 2f
-                joystickCurrentX = event.x
-                joystickCurrentY = event.y
-                 Log.d(TAG, "Joystick DOWN at $joystickCurrentX, $joystickCurrentY. Center: $joystickCenterX, $joystickCenterY")
-            }
-            MotionEvent.ACTION_MOVE -> {
-                if (joystickDown) {
-                    joystickCurrentX = event.x
-                    joystickCurrentY = event.y
-                    //  Log.d(TAG, "Joystick MOVE to $joystickCurrentX, $joystickCurrentY")
-                }
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
-                joystickDown = false
-                joystickCurrentX = joystickCenterX
-                joystickCurrentY = joystickCenterY
-                Log.d(TAG, "Joystick UP/CANCEL")
-            }
         }
     }
 
@@ -144,43 +109,31 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 cameraTouchDown = true
                 lastCameraTouchX = event.x
-                // lastCameraTouchY = event.y
-                 Log.d(TAG, "Camera touch DOWN at $lastCameraTouchX")
             }
             MotionEvent.ACTION_MOVE -> {
                 if (cameraTouchDown) {
                     val deltaX = event.x - lastCameraTouchX
-                    // val deltaY = event.y - lastCameraTouchY
-
-                    // Update player rotation (camera view)
-                    // Sensitivity factor might be needed
                     val rotationSensitivity = 0.2f
                     localPlayer.rotation += deltaX * rotationSensitivity
-                    // Clamp rotation if necessary (e.g., localPlayer.rotation %= 360f)
-
+                    localPlayer.rotation %= 360f
+                    if (localPlayer.rotation < 0) localPlayer.rotation += 360f
                     lastCameraTouchX = event.x
-                    // lastCameraTouchY = event.y
-                    // Log.d(TAG, "Camera touch MOVE by $deltaX. New player rotation: ${localPlayer.rotation}")
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
                 cameraTouchDown = false
-                Log.d(TAG, "Camera touch UP/CANCEL")
             }
         }
     }
 
-
     private fun handleMicrophoneTouchEvent(event: MotionEvent) {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                Log.d(TAG, "Mic button pressed - starting listening.")
                 voiceManager.startListening()
-                binding.buttonMicrophone.alpha = 0.7f // Visual feedback
+                binding.buttonMicrophone.alpha = 0.7f
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                Log.d(TAG, "Mic button released - stopping listening.")
-                voiceManager.stopListening() // SpeechRecognizer might stop on its own after result/timeout
+                voiceManager.stopListening()
                 binding.buttonMicrophone.alpha = 1.0f
             }
         }
@@ -188,23 +141,17 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     private fun setupVoiceRecognitionCallbacks() {
         voiceManager.onSpellRecognized = { spellType ->
-            Log.i(TAG, "Spell recognized: $spellType")
             if (spellType != SpellType.UNKNOWN) {
                 val spellToCast = availableSpells[spellType]
                 if (spellToCast != null) {
-                    // Determine target position: For simplicity, cast in front of player
-                    // In a real game, this would be based on camera aim or target selection
-                    val castDistance = 5f // Arbitrary distance in front
+                    val castDistance = 5f
                     val angleRad = Math.toRadians(localPlayer.rotation.toDouble())
                     val targetX = localPlayer.position.x + castDistance * kotlin.math.sin(angleRad).toFloat()
                     val targetZ = localPlayer.position.z + castDistance * kotlin.math.cos(angleRad).toFloat()
-                    val targetPosition = Vector3(targetX, localPlayer.position.y, targetZ) // Assume Y is ground level for now
-
-                    Log.d(TAG, "Casting ${spellToCast.name} at $targetPosition")
+                    val targetPosition = Vector3(targetX, localPlayer.position.y, targetZ)
                     val allPlayersInScene = mutableListOf(localPlayer).apply { addAll(otherPlayers) }
                     localPlayer.castSpell(spellToCast, targetPosition, allPlayersInScene)
-                    // networkManager?.sendSpellCast(spellToCast, targetPosition) // For multiplayer
-                    updateHud()
+                    // updateHud() // Removido - GameRenderer vai cuidar disso
                 } else {
                     Toast.makeText(this, "Magia '${spellType.command}' não implementada.", Toast.LENGTH_SHORT).show()
                 }
@@ -212,17 +159,11 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 Toast.makeText(this, "Comando de voz não reconhecido.", Toast.LENGTH_SHORT).show()
             }
         }
-
         voiceManager.onError = { errorMsg ->
-            Log.e(TAG, "Voice recognition error: $errorMsg")
             Toast.makeText(this, "Erro no reconhecimento: $errorMsg", Toast.LENGTH_LONG).show()
-            binding.buttonMicrophone.alpha = 1.0f // Reset mic button visual
+            binding.buttonMicrophone.alpha = 1.0f
         }
-
-        voiceManager.onListeningStateChanged = { isListening ->
-            Log.d(TAG, "Voice listening state: $isListening")
-            // Could update UI to show listening active, e.g., animate mic button
-        }
+        // ... (onListeningStateChanged unchanged)
     }
 
     private val gameLoopRunnable = object : Runnable {
@@ -232,64 +173,47 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
             lastFrameTime = currentTime
 
             updateGame(deltaTime)
-            renderGame() // For now, this will just be HUD update
+            renderGame()
 
-            gameLoopHandler.postDelayed(this, 16) // Aim for roughly 60 FPS
+            gameLoopHandler.postDelayed(this, 16)
         }
     }
 
     private fun updateGame(deltaTime: Float) {
-        // Player movement from joystick
-        if (joystickDown) {
-            val deltaX = joystickCurrentX - joystickCenterX
-            val deltaY = joystickCurrentY - joystickCenterY // In screen space, Y down is positive
-
-            // Normalize and scale joystick input
-            val maxJoystickTravel = binding.joystickLeftPlaceholder.width / 3f // Max travel distance from center
-            var moveMagnitude = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
-            var normalizedInputX = if (moveMagnitude > 0.01f) deltaX / moveMagnitude else 0f
-            var normalizedInputZ = if (moveMagnitude > 0.01f) -deltaY / moveMagnitude else 0f // Invert Y for forward Z movement
-
-            // Consider player's current rotation for forward/strafe movement
-            // Simple forward/backward and strafe based on joystick without rotation for now:
-            // To make it relative to player's view:
+        if (joystickInputNormalizedX != 0f || joystickInputNormalizedY != 0f) {
+            val inputForward = -joystickInputNormalizedY
+            val inputStrafe = joystickInputNormalizedX
             val playerAngleRad = Math.toRadians(localPlayer.rotation.toDouble())
-            val moveForward = normalizedInputZ * kotlin.math.cos(playerAngleRad).toFloat() - normalizedInputX * kotlin.math.sin(playerAngleRad).toFloat()
-            val moveStrafe = normalizedInputZ * kotlin.math.sin(playerAngleRad).toFloat() + normalizedInputX * kotlin.math.cos(playerAngleRad).toFloat()
-
-            // Apply movement (deltaX is strafe, deltaZ is forward/backward relative to world/camera)
-            localPlayer.move(moveStrafe, moveForward, deltaTime)
+            val moveForwardComponentZ = inputForward * kotlin.math.cos(playerAngleRad).toFloat()
+            val moveForwardComponentX = inputForward * kotlin.math.sin(playerAngleRad).toFloat()
+            val moveStrafeComponentZ = -inputStrafe * kotlin.math.sin(playerAngleRad).toFloat()
+            val moveStrafeComponentX = inputStrafe * kotlin.math.cos(playerAngleRad).toFloat()
+            val worldDeltaX = moveForwardComponentX + moveStrafeComponentX
+            val worldDeltaZ = moveForwardComponentZ + moveStrafeComponentZ
+            localPlayer.move(worldDeltaX, worldDeltaZ, deltaTime)
         }
-
-
-        localPlayer.update(deltaTime) // Handle regen, status effects expiry
-        // Update other players if any
-        // otherPlayers.forEach { it.update(deltaTime) }
-
-        // Check game conditions (e.g., win/loss) - for later
-        // Handle spell effects, projectiles (if any active) - for later
+        localPlayer.update(deltaTime)
+        // updateHud() // Removido - GameRenderer vai cuidar disso
     }
 
-
-    @SuppressLint("SetTextI18n")
-    private fun updateHud() {
-        binding.textViewHP.text = "HP: ${localPlayer.hp}"
-        binding.textViewMana.text = "Mana: ${localPlayer.mana}"
-    }
+    // Removido - GameRenderer vai cuidar disso, ou os TextViews serão removidos do layout XML
+    // @SuppressLint("SetTextI18n")
+    // private fun updateHud() {
+    //    binding.textViewHP.text = "HP: ${localPlayer.hp}"
+    //    binding.textViewMana.text = "Mana: ${localPlayer.mana}"
+    // }
 
     private fun renderGame() {
-        if (binding.surfaceViewGame.holder.surface.isValid) {
-            // gameRenderer?.drawFrame(localPlayer, otherPlayers) // Phase 2
-            updateHud() // Ensure HUD is up-to-date even if full render isn't happening
-        }
+        // A lógica de updateHud() foi movida para dentro do GameRenderer.drawFrame()
+        // ou os TextViews serão removidos se o GameRenderer desenhar o HUD diretamente.
+        // Por agora, GameRenderer.drawFrame() já inclui drawHUD().
+        gameRenderer?.drawFrame(localPlayer, otherPlayers)
     }
 
-    // --- Game Loop Control ---
     private fun startGameLoop() {
         Log.d(TAG, "Starting game loop.")
         lastFrameTime = System.currentTimeMillis()
-        gameLoopHandler.removeCallbacks(gameLoopRunnable) // Ensure no multiple loops
+        gameLoopHandler.removeCallbacks(gameLoopRunnable)
         gameLoopHandler.post(gameLoopRunnable)
     }
 
@@ -298,20 +222,17 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         gameLoopHandler.removeCallbacks(gameLoopRunnable)
     }
 
-    // --- Activity Lifecycle ---
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "GameActivity onResume.")
-        // Re-hide system UI in case it became visible
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
-
         if (binding.surfaceViewGame.holder.surface.isValid) {
-             startGameLoop()
+            startGameLoop()
         }
     }
 
@@ -325,26 +246,28 @@ class GameActivity : AppCompatActivity(), SurfaceHolder.Callback {
         super.onDestroy()
         Log.d(TAG, "GameActivity onDestroy.")
         voiceManager.destroy()
-        stopGameLoop() // Ensure loop is stopped
-        // gameRenderer?.cleanup() // Phase 2
+        stopGameLoop()
+        gameRenderer?.cleanup() // Adicionado
     }
 
     // --- SurfaceHolder.Callback ---
     override fun surfaceCreated(holder: SurfaceHolder) {
         Log.d(TAG, "Surface created.")
-        // gameRenderer = GameRenderer(binding.surfaceViewGame, this) // Initialize renderer - Phase 2
+        if (gameRenderer == null) {
+            gameRenderer = GameRenderer(holder, this) // Inicializa o renderer
+        }
         startGameLoop()
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         Log.d(TAG, "Surface changed: $width x $height")
-        // gameRenderer?.onSurfaceChanged(width, height) // Phase 2
+        gameRenderer?.onSurfaceChanged(width, height) // Informa o renderer sobre a mudança de tamanho
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         Log.d(TAG, "Surface destroyed.")
         stopGameLoop()
-        // gameRenderer?.onSurfaceDestroyed() // Phase 2 - release resources
-        // gameRenderer = null
+        // gameRenderer?.cleanup() // Pode ser chamado aqui ou em onDestroy
+        gameRenderer = null // Libera a referência
     }
 }
